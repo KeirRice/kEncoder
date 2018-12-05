@@ -14,25 +14,34 @@ namespace kEncoder{
 
 		Encoder() {};
 		
-		void setPort(volatile uint8_t *port, uint8_t port_mask);  // We all both pins next to each other for fast reads.
 		void setDebounceDelay(int delay);
 		void setInteruptHandler(void (*interuptHandler)(void));
 
 		void interputHandler();
+		void setPort(volatile uint8_t *ddr, volatile uint8_t *port, volatile uint8_t *pin, uint8_t mask);  // We need all both pins next to each other for fast reads.
 
+		byte read();
+		
 		bool error(bool reset_flag = true);
+		virtual void update(byte){};
+		virtual byte readDigital(){return 0;};
+		byte readPort();
 
 	protected:
 		volatile bool error_flag = false;
 		
+		volatile uint8_t *_ddr;
 		volatile uint8_t *_port;
+		volatile uint8_t *_pin;
+
 		uint8_t _port_mask;
 		uint8_t _port_shift_on_read = 0;
 		unsigned int _debounce_delay = 0;
 
 		void (*_interupt_handler)(void);
 
-		virtual void update(byte){};
+		typedef byte (Encoder::*fptr)(void);
+  		fptr read_values;
 
 	};
 
@@ -41,12 +50,13 @@ namespace kEncoder{
 	public:
 
 		AbsoluteEncoder() : Encoder() {};
-		AbsoluteEncoder(int pinA, int pinB, int pinC, int pinD): Encoder(), _pinA(pinA), _pinB(pinB), _pinC(pinC), _pinD(pinD) {};
 
 		void setPins(int pinA, int pinB, int pinC, int pinD);
 
 		void setup();
 		void setup(void (*interuptHandler)(void));
+		
+		byte readDigital();
 
 		volatile char position = 0;
 		volatile char direction = 0;
@@ -62,6 +72,10 @@ namespace kEncoder{
 		void (*_interupt_handler)(void);
 
 		void update(byte new_reading);
+
+		typedef byte (AbsoluteEncoder::*fptr)(void);
+  		fptr read_values;
+
 	};
 
 
@@ -75,6 +89,8 @@ namespace kEncoder{
 
 		void setup();
 		void setup(void (*interuptHandler)(void));
+		
+		byte readDigital();
 
 		volatile char steps = 0;
 		volatile char direction = 0;
@@ -89,6 +105,9 @@ namespace kEncoder{
 		void (*_interupt_handler)(void);
 
 		void update(byte new_reading);
+
+		typedef byte (RelativeEncoder::*fptr)(void);
+  		fptr read_values;
 	};
 
 };

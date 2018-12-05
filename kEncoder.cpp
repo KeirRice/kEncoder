@@ -26,10 +26,12 @@ namespace kEncoder{
 	*/
 
 
-	void Encoder::setPort(volatile uint8_t *port, const uint8_t port_mask)
+	void Encoder::setPort(volatile uint8_t *ddr, volatile uint8_t *port, volatile uint8_t *pin, uint8_t mask)
 	{
+		_ddr = ddr;
 		_port = port;
-		_port_mask = port_mask;
+		_pin = pin;
+		_port_mask = mask;
 	}
 	void Encoder::setDebounceDelay(int delay)
 	{
@@ -46,9 +48,17 @@ namespace kEncoder{
 
 		  // TODO: Check this algorithm works with events...
 		  if (interrupt_time - last_interrupt_time > _debounce_delay) {
-		    update((*_port & _port_mask) >> _port_shift_on_read);
+		    update(read());
 		  }
 		  last_interrupt_time = interrupt_time; 
+	}
+
+	byte Encoder::readPort(){
+		return ((*_pin >> _port_shift_on_read) & _port_mask);
+	}
+
+	byte Encoder::read(){
+		return (this->*read_values)();
 	}
 
 
@@ -83,14 +93,22 @@ namespace kEncoder{
 	}
 	void AbsoluteEncoder::setup()
 	{
-		pinMode(_pinA, INPUT_PULLUP);
-		pinMode(_pinB, INPUT_PULLUP);
-		pinMode(_pinC, INPUT_PULLUP);
-		pinMode(_pinD, INPUT_PULLUP);
-
-	 	_port_shift_on_read = maskToShiftCount(_port_mask);
+		if(_port){
+			*_ddr |= ~_port_mask; // Set mask pins to input
+			*_port |= _port_mask; // Set mask pins to pullup
+			read_values = &AbsoluteEncoder::readPort;
+			_port_shift_on_read = maskToShiftCount(_port_mask);
+		}
+		else {
+			pinMode(_pinA, INPUT_PULLUP);
+			pinMode(_pinB, INPUT_PULLUP);
+			pinMode(_pinC, INPUT_PULLUP);
+			pinMode(_pinD, INPUT_PULLUP);
+			read_values = &AbsoluteEncoder::readDigital;
+		}
+	 	
 		// Prime our values
-		update((*_port >> _port_shift_on_read) & _port_mask);
+		update(read());
 
 		if(_interupt_handler){
 			// Interupts on
@@ -281,6 +299,9 @@ namespace kEncoder{
 	  position = absolute_position;
 	}
 
+	byte AbsoluteEncoder::readDigital(){
+		return ((_pinA << 3) | (_pinB << 2) | (_pinC << 1) | _pinD);
+	}
 
 
 	/*
@@ -326,19 +347,26 @@ namespace kEncoder{
 
 	void RelativeEncoder::setup()
 	{
-		pinMode(_pinA, INPUT_PULLUP);
-		pinMode(_pinB, INPUT_PULLUP);
+		if(_port){
+			*_ddr |= ~_port_mask; // Set mask pins to input
+			*_port |= _port_mask; // Set mask pins to pullup
+			read_values = &AbsoluteEncoder::readPort;
+			_port_shift_on_read = maskToShiftCount(_port_mask);
+		}
+		else {
+			pinMode(_pinA, INPUT_PULLUP);
+			pinMode(_pinB, INPUT_PULLUP);
+			read_values = &RelativeEncoder::readDigital;
+		}
 
 		// Prime our values
-		update((*_port & _port_mask) >> _port_shift_on_read);
+		update(read());
 
 		if(_interupt_handler){
 			// Interupts on
 			attachPinChangeInterrupt( (uint8_t) _pinA | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
 			attachPinChangeInterrupt( (uint8_t) _pinB | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-		}
-	  _port_shift_on_read = maskToShiftCount(_port_mask);
-	 
+		}	 
 	}
 
 
@@ -352,6 +380,10 @@ namespace kEncoder{
 	  else {
 	    steps += new_direction;
 	  }
+	}
+
+	byte RelativeEncoder::readDigital(){
+		return ((_pinA << 1) | _pinB);
 	}
 
 }
