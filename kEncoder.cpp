@@ -9,30 +9,10 @@
 
 namespace kEncoder{
 
-	/* Return the number of sifts needed to put a 1 in the LSBit*/
-	unsigned int maskToShiftCount(byte mask){
-	  for(unsigned int i = 0; i < 8; ++i){
-	  	if(mask & 1){
-	  		return i;
-	  	}
-	  	mask = mask >> 1;
-	  }
-	  return 0;
-	}
-
-
 	/*
 	*	Encoder
 	*/
 
-
-	void Encoder::setPort(volatile uint8_t *ddr, volatile uint8_t *port, volatile uint8_t *pin, uint8_t mask)
-	{
-		_ddr = ddr;
-		_port = port;
-		_pin = pin;
-		_port_mask = mask;
-	}
 	void Encoder::setDebounceDelay(int delay)
 	{
 		_debounce_delay = delay;
@@ -48,19 +28,10 @@ namespace kEncoder{
 
 		  // TODO: Check this algorithm works with events...
 		  if (interrupt_time - last_interrupt_time > _debounce_delay) {
-		    update(read());
+		    update(mPins->read());
 		  }
 		  last_interrupt_time = interrupt_time; 
 	}
-
-	byte Encoder::readPort(){
-		return ((*_pin >> _port_shift_on_read) & _port_mask);
-	}
-
-	byte Encoder::read(){
-		return (this->*read_values)();
-	}
-
 
 	bool Encoder::error(bool reset_flag /*= true*/) {
 		// Check for encoder errors
@@ -78,14 +49,6 @@ namespace kEncoder{
 	static const char absolute_position_table[16] = {0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 13, 5, 10};
 	static const byte absolute_lower_nibble_mask = 0b00001111; // Only keep the four lowest bits
 
-	void AbsoluteEncoder::setPins(int pinA, int pinB, int pinC, int pinD)
-	{
-		_pinA = pinA;
-		_pinB = pinB;
-		_pinC = pinC;
-		_pinD = pinD;
-	}
-
 	void AbsoluteEncoder::setup(void (*interuptHandler)(void))
 	{
 		setInteruptHandler(interuptHandler);
@@ -93,29 +56,16 @@ namespace kEncoder{
 	}
 	void AbsoluteEncoder::setup()
 	{
-		if(_port){
-			*_ddr |= ~_port_mask; // Set mask pins to input
-			*_port |= _port_mask; // Set mask pins to pullup
-			read_values = &AbsoluteEncoder::readPort;
-			_port_shift_on_read = maskToShiftCount(_port_mask);
-		}
-		else {
-			pinMode(_pinA, INPUT_PULLUP);
-			pinMode(_pinB, INPUT_PULLUP);
-			pinMode(_pinC, INPUT_PULLUP);
-			pinMode(_pinD, INPUT_PULLUP);
-			read_values = &AbsoluteEncoder::readDigital;
-		}
-	 	
+		mPins->pinMode(INPUT_PULLUP);
+
 		// Prime our values
-		update(read());
+		update(mPins->read());
 
 		if(_interupt_handler){
 			// Interupts on
-			attachPinChangeInterrupt( (uint8_t) _pinA | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-			attachPinChangeInterrupt( (uint8_t) _pinB | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-			attachPinChangeInterrupt( (uint8_t) _pinC | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-			attachPinChangeInterrupt( (uint8_t) _pinD | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
+			for(uint8_t i=0; i < mPins->mPinCount; ++i){
+				attachPinChangeInterrupt( (uint8_t) mPins->pins[i] | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
+			}
 		}
 	}
 
@@ -299,10 +249,6 @@ namespace kEncoder{
 	  position = absolute_position;
 	}
 
-	byte AbsoluteEncoder::readDigital(){
-		return ((_pinA << 3) | (_pinB << 2) | (_pinC << 1) | _pinD);
-	}
-
 
 	/*
 	*	RelativeEncoder
@@ -333,12 +279,6 @@ namespace kEncoder{
 
 	static const byte relative_lower_nibble_mask = 0b00001111;  // Only keep the four lowest bits
 
-	void RelativeEncoder::setPins(int pinA, int pinB)
-	{
-		_pinA = pinA;
-		_pinB = pinB;
-	}
-
 	void RelativeEncoder::setup(void (*interuptHandler)(void))
 	{
 		setInteruptHandler(interuptHandler);
@@ -347,26 +287,17 @@ namespace kEncoder{
 
 	void RelativeEncoder::setup()
 	{
-		if(_port){
-			*_ddr |= ~_port_mask; // Set mask pins to input
-			*_port |= _port_mask; // Set mask pins to pullup
-			read_values = &AbsoluteEncoder::readPort;
-			_port_shift_on_read = maskToShiftCount(_port_mask);
-		}
-		else {
-			pinMode(_pinA, INPUT_PULLUP);
-			pinMode(_pinB, INPUT_PULLUP);
-			read_values = &RelativeEncoder::readDigital;
-		}
+		mPins->pinMode(INPUT_PULLUP);
 
 		// Prime our values
-		update(read());
+		update(mPins->read());
 
 		if(_interupt_handler){
 			// Interupts on
-			attachPinChangeInterrupt( (uint8_t) _pinA | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-			attachPinChangeInterrupt( (uint8_t) _pinB | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-		}	 
+			for(uint8_t i=0; i < mPins->mPinCount; ++i){
+				attachPinChangeInterrupt( (uint8_t) mPins->pins[i] | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
+			}
+		}
 	}
 
 
@@ -381,9 +312,4 @@ namespace kEncoder{
 	    steps += new_direction;
 	  }
 	}
-
-	byte RelativeEncoder::readDigital(){
-		return ((_pinA << 1) | _pinB);
-	}
-
 }
