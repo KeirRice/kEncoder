@@ -2,8 +2,8 @@
 #include <kEncoder.h>
 using namespace kEncoder;
 
-AbsoluteEncoder abs_encoder;
-RelativeEncoder rel_encoder;
+AbsoluteEncoder abs_encoder((PinCollectionInterface) PinBank<A8, A9, A10, A11>());
+RelativeEncoder rel_encoder((PinCollectionInterface) PinGroup<A12, A13>());
 
 void abs_encoder_isr(){
   abs_encoder.interputHandler();
@@ -15,12 +15,7 @@ void rel_encoder_isr(){
 
 void setup() {
   // put your setup code here, to run once:
-  abs_encoder.setPins(A8, A9, A10, A11);
-  abs_encoder.setPort(&DDRK, &PORTK, &PINK, 0b00001111);
   abs_encoder.setup(&abs_encoder_isr);
-  
-  rel_encoder.setPins(A12, A13);
-  rel_encoder.setPort(&DDRK, &PORTK, &PINK, 0b00110000);
   rel_encoder.setup(&rel_encoder_isr);
 }
 

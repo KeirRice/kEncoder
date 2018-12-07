@@ -9,6 +9,18 @@
 
 namespace kEncoder{
 
+
+	/* Return the number of sifts needed to put a 1 in the LSBit*/
+	uint8_t maskToShifter(uint8_t mask){
+	  for(unsigned int i = 0; i < 8; ++i){
+	  	if(mask & 1){
+	  		return i;
+	  	}
+	  	mask = mask >> 1;
+	  }
+	  return 0;
+	}
+
 	/*
 	*	Encoder
 	*/

@@ -15,31 +15,21 @@ namespace kEncoder{
 	typedef volatile RwReg * port_ptr_t;
 	typedef RwReg port_t;
 
+	uint8_t maskToShifter(uint8_t mask);
+
 	
 
-	/* Return the number of sifts needed to put a 1 in the LSBit*/
-	uint8_t maskToShifter(uint8_t mask){
-	  for(unsigned int i = 0; i < 8; ++i){
-	  	if(mask & 1){
-	  		return i;
-	  	}
-	  	mask = mask >> 1;
-	  }
-	  return 0;
-	}
-
 	/*Interface for the pin collections*/
-	class PinCollection {
+	class PinCollectionInterface {
 		public:
 			uint8_t mPinCount;
 			uint8_t pins[];
-
-			virtual byte read(){return 0;};
-			virtual void pinMode(uint8_t){};
+			virtual byte read();
+			virtual void pinMode(uint8_t);
 
 	};
 
-	template<uint8_t... Pins> class _PinCollection : public PinCollection {
+	template<uint8_t... Pins> class _PinCollection : public PinCollectionInterface {
 		public:
 		  uint8_t mPinCount = sizeof...(Pins);
 		  uint8_t pins[sizeof...(Pins)] = {uint8_t(Pins)...};
@@ -47,10 +37,11 @@ namespace kEncoder{
 
 	template<uint8_t... Pins> class PinBank : public _PinCollection<Pins...>{
 		public:
+			uint8_t mPinCount;
+			uint8_t pins[];
+			
 		  RwReg sPinMask;
-		  volatile RwReg *sPort;
 		  volatile RoReg *sInPort;
-		  volatile RwReg *sDDRPort;
 		  uint8_t sPortShiftOnRead;
 
 		  /* Compile time assert that pins are contiguous. */
@@ -76,13 +67,11 @@ namespace kEncoder{
 		  	int counter=0;
 		    if(counter == 0){
 		      // Set these values once, then we can just check the reset of the pins match.
-		      sPort = portOutputRegister(digitalPinToPort(arg));
 		      sInPort = portInputRegister(digitalPinToPort(arg));
-		      sDDRPort = portModeRegister(digitalPinToPort(arg));
 		    }
 		    else {
 		      // Fail if any of the pins are on a diffrent port.
-		      assert(sPort == portOutputRegister(digitalPinToPort(arg)));
+		      assert(sInPort == portInputRegister(digitalPinToPort(arg)));
 		    }
 		    // Accumulate the bit mask
 		    sPinMask |= digitalPinToBitMask(arg);
@@ -94,6 +83,9 @@ namespace kEncoder{
 		  };
 		  virtual void pinMode(uint8_t mode) override {
 		  	if(mode == INPUT_PULLUP){
+		  		volatile RwReg *sDDRPort = portModeRegister(digitalPinToPort(pins[0]));
+		  		volatile RwReg *sPort  = portOutputRegister(digitalPinToPort(pins[0]));
+
 			  	*sDDRPort |= ~sPinMask; // Set mask pins to input
 				*sPort |= sPinMask; // Set mask pins to pullup
 			}
@@ -126,12 +118,12 @@ namespace kEncoder{
 	{
 	public:
 
-		PinCollection *mPins;
+		PinCollectionInterface *mPins;
 
 		Encoder() : mPins(nullptr) {};
-		Encoder(PinCollection &pins) : mPins(&pins) {};
+		Encoder(PinCollectionInterface &pins) : mPins(&pins) {};
 
-		void setPins(PinCollection &pins){mPins = &pins;};  // We need all both pins next to each other for fast reads.
+		void setPins(PinCollectionInterface &pins){mPins = &pins;};  // We need all both pins next to each other for fast reads.
 		void setDebounceDelay(int delay);
 		void setInteruptHandler(void (*interuptHandler)(void));
 
@@ -153,7 +145,7 @@ namespace kEncoder{
 	public:
 
 		AbsoluteEncoder() : Encoder() {};
-		AbsoluteEncoder(PinCollection pins) : Encoder(pins) {};
+		AbsoluteEncoder(PinCollectionInterface pins) : Encoder(pins) {};
 
 		void setup();
 		void setup(void (*interuptHandler)(void));
@@ -180,7 +172,7 @@ namespace kEncoder{
 	public:
 
 		RelativeEncoder() : Encoder() {};
-		RelativeEncoder(PinCollection pins) : Encoder(pins) {};
+		RelativeEncoder(PinCollectionInterface pins) : Encoder(pins) {};
 
 		void setup();
 		void setup(void (*interuptHandler)(void));
@@ -197,6 +189,5 @@ namespace kEncoder{
 		void update(byte new_reading);
 	};
 };
-
 
 
