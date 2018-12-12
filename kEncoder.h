@@ -95,6 +95,24 @@ namespace kEncoder{
 		  };
 	};
 
+	class PortGroup : public PinCollectionInterface {
+			PortID &mPort;
+			uint8_t mMask;
+			uint8_t mShift = 0;
+			public:
+				PortGroup(PortID port, uint8_t mask) : mPort(port), mMask(mask) {
+					mShift = maskToShifter(mask);
+				};
+
+			  virtual byte read() override{
+			  	return mPort.digitalRead(mMask, mShift);
+			  };
+
+			  virtual void pinMode(uint8_t mode) override{
+			  	mPort.pinMode(mode, mMask);
+			  };
+		};
+
 	template<uint8_t... Pins> class PinGroup : public _PinCollection<Pins...> {
 		public:
 
