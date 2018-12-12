@@ -6,8 +6,9 @@
 
 #include <Arduino.h>
 #include <assert.h>
-#include <kPins.h>
+#include <kPin.h>
 
+using namespace kPin;
 
 namespace kEncoder {
 
@@ -23,71 +24,16 @@ uint8_t maskToShifter(uint8_t mask);
 /*Interface for the pin collections*/
 class PinCollectionInterface {
   public:
+  	uint8_t mPinCount = 0;
+  	PinID pins[] = {};
 
     virtual byte read();
     virtual void pinMode(uint8_t);
 
 };
 
-// template<uint8_t... Pins> class PinBank : public PinCollectionInterface {
-//   public:
 
-//     RwReg sPinMask;
-//     volatile RoReg *sInPort;
-//     uint8_t sPortShiftOnRead;
-
-//     /* Compile time assert that pins are contiguous. */
-//     template<class T, class... Args>
-//     constexpr static bool check(T arg1, T arg2) {
-//       return (bool)(arg1 + 1 == arg2);
-//     };
-//     template<class T, class... Args>
-//     constexpr static bool check(T arg1, T arg2, Args... args) {
-//       return (bool) ((arg1 + 1 == arg2) & check(arg2, args...));
-//     };
-//     static_assert(check(Pins...), "Invalid pins specified. We need pins in a contigous range on the same port.");
-
-//     PinBank() {
-//       _init(Pins...);
-//       sPortShiftOnRead = maskToShifter(sPinMask);
-//     }
-
-//     /* Build up port data. */
-//     void _init(int counter = 0) {};
-//     template<class T, class... Args>
-//     void _init(T arg, Args... args) {
-//       int counter = 0;
-//       if (counter == 0) {
-//         // Set these values once, then we can just check the reset of the pins match.
-//         sInPort = portInputRegister(digitalPinToPort(arg));
-//       }
-//       else {
-//         // Fail if any of the pins are on a diffrent port.
-//         assert(sInPort == portInputRegister(digitalPinToPort(arg)));
-//       }
-//       // Accumulate the bit mask
-//       sPinMask |= digitalPinToBitMask(arg);
-//       _init(args..., ++counter);
-//     };
-
-//     virtual byte read() override {
-//       return (*sInPort & sPinMask) << sPortShiftOnRead;
-//     };
-//     virtual void pinMode(uint8_t mode) override {
-//       if (mode == INPUT_PULLUP) {
-//         volatile RwReg *sDDRPort = portModeRegister(digitalPinToPort(pins[0]));
-//         volatile RwReg *sPort  = portOutputRegister(digitalPinToPort(pins[0]));
-
-//         *sDDRPort |= ~sPinMask; // Set mask pins to input
-//         *sPort |= sPinMask; // Set mask pins to pullup
-//       }
-//       else {
-//         assert(false); // "todo"
-//       }
-//     };
-// };
-
-template<uint8_t... Pins> class PinGroup : public _PinCollection<Pins...> {
+template<uint8_t... Pins> class PinGroup : public PinCollectionInterface {
   public:
     uint8_t mPinCount = sizeof...(Pins);
     PinID pins[sizeof...(Pins)] = {PinID(Pins)...};
@@ -114,7 +60,7 @@ class PinPort : public PinCollectionInterface {
     uint8_t mMask;
     uint8_t mShift;
 
-    PinPort(PortID &port, uint8_t mask) : mPort(port), mMask(mask) {
+    PinPort(const PortID &port, uint8_t mask) : mPort(port), mMask(mask) {
       mShift = maskToShifter(mask);
     }
 
@@ -122,13 +68,7 @@ class PinPort : public PinCollectionInterface {
       return mPort.digitalRead(mMask, mShift);
     };
     virtual void pinMode(uint8_t mode) override {
-      if (mode == INPUT_PULLUP) {
-        *mPort.mDDRPort |= ~mMask;
-        *mPort.mPort |= mMask;
-      }
-      else {
-        assert(false); // "todo"
-      }
+    	mPort.pinMode(mode, mMask);
     };
 };
 
