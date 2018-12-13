@@ -6,6 +6,9 @@
 
 #include <Arduino.h>
 #include <assert.h>
+#include <kPin.h>
+
+using namespace kPin;
 
 
 namespace kEncoder{
