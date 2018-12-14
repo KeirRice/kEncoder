@@ -24,14 +24,14 @@ namespace kEncoder{
 
 	void Encoder::interputHandler()
 	{
-		  static uint32_t last_interrupt_time = 0;
-		  uint32_t interrupt_time = millis();
+		static uint32_t last_interrupt_time = 0;
+		uint32_t interrupt_time = millis();
 
-		  // TODO: Check this algorithm works with events...
-		  if (interrupt_time - last_interrupt_time > _debounce_delay) {
-		    update(mPins->digitalRead());
-		  }
-		  last_interrupt_time = interrupt_time; 
+		// TODO: Check this algorithm works with events...
+		if (interrupt_time - last_interrupt_time > _debounce_delay) {
+			update(mPins->digitalRead());
+		}
+		last_interrupt_time = interrupt_time; 
 	}
 
 	bool Encoder::error(bool reset_flag /*= true*/) {
@@ -50,24 +50,26 @@ namespace kEncoder{
 	static const char absolute_position_table[16] = {0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 13, 5, 10};
 	static const byte absolute_lower_nibble_mask = 0b00001111; // Only keep the four lowest bits
 
-	void AbsoluteEncoder::setup(void (*interuptHandler)(void))
+	void AbsoluteEncoder::setup(Group::PinsInterface &pins, void (*interuptHandler)(void))
 	{
+		mPins = &pins;
 		setInteruptHandler(interuptHandler);
 		AbsoluteEncoder::setup();
 	}
 	void AbsoluteEncoder::setup()
 	{
+		Serial.println("kEncode setup");
 		mPins->pinMode(INPUT_PULLUP);
 
-		// Prime our values
-		update(mPins->digitalRead());
+		// // Prime our values
+		// update(mPins->digitalRead());
 
-		if(_interupt_handler){
-			// Interupts on
-			for(uint8_t i=0; i < mPins->mPinCount; ++i){
-				attachPinChangeInterrupt( (uint8_t) mPins->pins[i] | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
-			}
-		}
+		// if(_interupt_handler){
+		// 	// Interupts on
+		// 	for(uint8_t i=0; i < mPins->mPinCount; ++i){
+		// 		attachPinChangeInterrupt( (uint8_t) mPins->pins[i] | PINCHANGEINTERRUPT, _interupt_handler, (uint8_t) CHANGE);
+		// 	}
+		// }
 	}
 
 
@@ -280,8 +282,9 @@ namespace kEncoder{
 
 	static const byte relative_lower_nibble_mask = 0b00001111;  // Only keep the four lowest bits
 
-	void RelativeEncoder::setup(void (*interuptHandler)(void))
+	void RelativeEncoder::setup(Group::PinsInterface &pins, void (*interuptHandler)(void))
 	{
+		mPins = &pins;
 		setInteruptHandler(interuptHandler);
 		setup();
 	}

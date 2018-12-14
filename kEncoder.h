@@ -20,7 +20,6 @@ namespace kEncoder{
 
 			// Pass pin group into constuctor or later using setPins
 			Encoder() : mPins(nullptr) {};
-			Encoder(Group::PinsInterface &pins) : mPins(&pins) {};
 			void setPins(Group::PinsInterface &pins){mPins = &pins;};  // We need all both pins next to each other for fast reads.
 			
 			// Debounce the signals
@@ -46,10 +45,9 @@ namespace kEncoder{
 	{
 		public:
 			AbsoluteEncoder() : Encoder() {};
-			AbsoluteEncoder(Group::PinsInterface pins) : Encoder(pins) {};
 
 			void setup();
-			void setup(void (*interuptHandler)(void));
+			void setup(Group::PinsInterface &pins, void (*interuptHandler)(void));
 			
 			volatile char position = 0;
 			volatile char direction = 0;
@@ -72,10 +70,9 @@ namespace kEncoder{
 	class RelativeEncoder : public Encoder {
 		public:
 			RelativeEncoder() : Encoder() {};
-			RelativeEncoder(Group::PinsInterface pins) : Encoder(pins) {};
 
 			void setup();
-			void setup(void (*interuptHandler)(void));
+			void setup(Group::PinsInterface &pins, void (*interuptHandler)(void));
 
 			volatile char steps = 0;
 			volatile char direction = 0;
