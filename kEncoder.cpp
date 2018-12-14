@@ -10,17 +10,6 @@
 namespace kEncoder{
 
 
-	/* Return the number of sifts needed to put a 1 in the LSBit*/
-	uint8_t maskToShifter(uint8_t mask){
-	  for(unsigned int i = 0; i < 8; ++i){
-	  	if(mask & 1){
-	  		return i;
-	  	}
-	  	mask = mask >> 1;
-	  }
-	  return 0;
-	}
-
 	/*
 	*	Encoder
 	*/
@@ -40,7 +29,7 @@ namespace kEncoder{
 
 		  // TODO: Check this algorithm works with events...
 		  if (interrupt_time - last_interrupt_time > _debounce_delay) {
-		    update(mPins->read());
+		    update(mPins->digitalRead());
 		  }
 		  last_interrupt_time = interrupt_time; 
 	}
@@ -71,7 +60,7 @@ namespace kEncoder{
 		mPins->pinMode(INPUT_PULLUP);
 
 		// Prime our values
-		update(mPins->read());
+		update(mPins->digitalRead());
 
 		if(_interupt_handler){
 			// Interupts on
@@ -302,7 +291,7 @@ namespace kEncoder{
 		mPins->pinMode(INPUT_PULLUP);
 
 		// Prime our values
-		update(mPins->read());
+		update(mPins->digitalRead());
 
 		if(_interupt_handler){
 			// Interupts on
